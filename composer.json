@@ -1,0 +1,16 @@
+{
+    "name": "ivus/filter",
+    "description": "IVUS Filter for Laravel, ability to filter different models",
+    "autoload": {
+        "psr-4": {
+            "Ivus\\Filter\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Ivan Uskov",
+            "email": "ivan.uskov.letter@gmail.com"
+        }
+    ],
+    "require": {}
+}
