@@ -40,6 +40,16 @@ abstract class BaseFilterService
     }
 
     /**
+     * Returns filters queries
+     *
+     * @return string
+     */
+    public static function getQueries(): string
+    {
+        return request()->query(config('filters.query_name', 'filters'), []);
+    }
+
+    /**
      * Get filterables from query string
      *
      * @return array<QueryDTO>
@@ -47,13 +57,13 @@ abstract class BaseFilterService
     public static function getQueryDTOs(): array
     {
         $queryDTOs = [];
-        $filters = request()->query(config('filters.query_name', 'filters'), []);
+        $queries = static::getQueries();
 
-        if (empty($filters))
+        if (empty($queries))
             return [];
 
         try {
-            foreach (explode(config('filters.union_separator', ';'), $filters) as $query)
+            foreach (explode(config('filters.union_separator', ';'), $queries) as $query)
             {
                 list($rule, $filterable) = explode(config('filters.rule_separator', '|'), $query);
                 list($column, $value) = explode(config('filters.column_separator', ':'), $filterable);
