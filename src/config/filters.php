@@ -1,6 +1,23 @@
 <?php
 
+use Ivus\Filter\Enums\Rules\{ArrayableRule, CustomableRule, NullableRule, StringableRule};
+
 return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filter Query Value Separator
+    |--------------------------------------------------------------------------
+    |
+    | Separator for multiple values, for example: "1,2,3".
+    |
+    */
+    'rules' => [
+        ArrayableRule::class,
+        NullableRule::class,
+        StringableRule::class,
+        CustomableRule::class,
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -20,7 +37,7 @@ return [
     | Separator between different filter queries.
     |
     */
-    'union_separator' => ';',
+    'union_separator' => '|',
 
     /*
     |--------------------------------------------------------------------------
@@ -30,7 +47,7 @@ return [
     | Separator for filter query rules.
     |
     */
-    'rule_separator' => '|',
+    'rule_separator' => ':',
 
     /*
     |--------------------------------------------------------------------------
@@ -40,6 +57,16 @@ return [
     | Separator for filter query columns and their values.
     |
     */
-    'column_separator' => ':',
+    'column_separator' => '=',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filter Query Value Separator
+    |--------------------------------------------------------------------------
+    |
+    | Separator for multiple values, for example: "1,2,3".
+    |
+    */
+    'value_separator' => ',',
 
 ];
