@@ -2,7 +2,9 @@
 
 namespace Ivus\Filter\Enums\Rules;
 
-enum ArrayableRule: string
+use Ivus\Filter\Interfaces\Enums\{RuleInterface, ExistingBuilderRuleInterface};
+
+enum ArrayableRule: string implements RuleInterface, ExistingBuilderRuleInterface
 {
     case WHERE_IN = 'whereIn';
     case OR_WHERE_IN = 'orWhereIn';

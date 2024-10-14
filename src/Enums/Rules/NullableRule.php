@@ -2,7 +2,9 @@
 
 namespace Ivus\Filter\Enums\Rules;
 
-enum NullableRule: string
+use Ivus\Filter\Interfaces\Enums\{RuleInterface, ExistingBuilderRuleInterface};
+
+enum NullableRule: string implements RuleInterface, ExistingBuilderRuleInterface
 {
     case WHERE_NULL = 'whereNull';
     case OR_WHERE_NULL = 'orWhereNull';

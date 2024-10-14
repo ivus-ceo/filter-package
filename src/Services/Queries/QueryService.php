@@ -3,11 +3,18 @@
 namespace Ivus\Filter\Services\Queries;
 
 use Exception;
+use Illuminate\Support\Facades\Log;
 use Ivus\Filter\DTOs\Queries\QueryDTO;
 use Ivus\Filter\Enums\Rules\{ArrayableRule, CustomableRule, NullableRule, StringableRule};
+use Ivus\Filter\Exceptions\FilterQueryException;
+use Ivus\Filter\Interfaces\Enums\ImaginableBuilderRuleInterface;
+use Ivus\Filter\Interfaces\Enums\RuleInterface;
+use Ivus\Filter\Interfaces\Services\QueryServiceInterface;
+use Ivus\Filter\Services\Builders\BuilderService;
+use Ivus\Filter\Services\Filters\FilterService;
 use Ivus\Filter\Services\Rules\RuleService;
 
-class QueryService
+class QueryService implements QueryServiceInterface
 {
     const DEFAULT_QUERY_NAME = 'filters';
     const DEFAULT_UNION_SEPARATOR = '|';
@@ -43,8 +50,8 @@ class QueryService
      */
     public static function getSanitizedString(string $input): string
     {
-        $input = htmlspecialchars($input, ENT_QUOTES, 'UTF-8', false);
         $input = strip_tags($input);
+        $input = htmlspecialchars($input, ENT_QUOTES, 'UTF-8', false);
 
         return $input;
     }
@@ -57,64 +64,42 @@ class QueryService
     public static function getQueryDTOs(): array
     {
         $queryDTOs = [];
-        $filterQueries = [];
         $separators = static::getSeparators();
-        $queries = request()->query(config('filters.query_name', static::DEFAULT_QUERY_NAME));
+        $queries = static::getSanitizedString(
+            request()->query(config('filters.query_name', static::DEFAULT_QUERY_NAME)) ?? ''
+        );
 
         try {
+            // Parse queries
             foreach (explode($separators['union'], $queries) as $query) {
-                list($rule, $columnable) = explode($separators['rule'], $query);
-                $array = explode($separators['column'], $columnable);
-                $column = $array[0];
-                $value = $array[1] ?? null;
-                if (empty($rule) || empty($column)) continue;
-                // Sanitize current inputs
-                $filterQueries[] = [
-                    'rule'   => static::getSanitizedString($rule),
-                    'column' => static::getSanitizedString($column),
-                    'value'  => (!empty($value)) ? static::getSanitizedString($value) : null,
-                ];
-            }
+                list($ruleName, $columnable) = explode($separators['rule'], $query);
+                $columnable = explode($separators['column'], $columnable);
+                $columnName = $columnable[0];
+                $columnValue = $columnable[1] ?? null;
 
-            foreach ($filterQueries as $filterQuery) {
-                $rule = RuleService::getResolvedRule($filterQuery['rule']);
-                if (empty($rule)) continue;
+                if (empty($ruleName) || empty($columnName))
+                    throw new FilterQueryException(trans('filters::errors.queries.E1', ['query' => $query]));
+
+                $rule = RuleService::getResolvedRule($ruleName);
+
+                if (empty($rule))
+                    throw new FilterQueryException(trans('filters::errors.queries.E2', ['rule' => $ruleName]));
+
+                $method = ($rule instanceof CustomableRule) ? $columnName : FilterService::getMethodByRule($rule);
 
                 $queryDTOs[] = new QueryDTO(
                     rule: $rule,
-                    column: $filterQuery['column'],
-                    value: static::getValueByRule($rule, $filterQuery['value']),
+                    method: $method,
+                    columnName: $columnName,
+                    columnOperator: FilterService::getOperatorByRule($rule),
+                    columnValue: FilterService::getValueByRule($rule, $columnValue),
                 );
             }
         } catch (Exception $exception) {
+            Log::error($exception->getMessage());
             return [];
         }
 
         return $queryDTOs;
-    }
-
-    /**
-     * @param ArrayableRule|CustomableRule|NullableRule|StringableRule $rule
-     * @param string|int|array|null $value
-     * @return string|array|null
-     */
-    public static function getValueByRule(
-        ArrayableRule | CustomableRule | NullableRule | StringableRule $rule,
-        string | int | array | null $value
-    ): string | array | null
-    {
-        $separators = static::getSeparators();
-
-        return match (get_class($rule)) {
-            ArrayableRule::class => explode($separators['value'], $value),
-            CustomableRule::class => $value,
-            StringableRule::class => in_array($rule, [
-                StringableRule::WHERE_LIKE,
-                StringableRule::WHERE_NOT_LIKE,
-                StringableRule::OR_WHERE_LIKE,
-                StringableRule::OR_WHERE_NOT_LIKE
-            ]) ? '%' . $value . '%' : (string) $value,
-            default => null,
-        };
     }
 }

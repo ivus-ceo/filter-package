@@ -2,7 +2,9 @@
 
 namespace Ivus\Filter\Enums\Operators;
 
-enum Operator: string
+use Ivus\Filter\Interfaces\Enums\OperatorInterface;
+
+enum Operator: string implements OperatorInterface
 {
     case EQUALS = '=';
     case NOT_EQUALS = '!=';

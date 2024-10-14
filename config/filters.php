@@ -1,23 +1,18 @@
 <?php
 
-use Ivus\Filter\Enums\Rules\{ArrayableRule, CustomableRule, NullableRule, StringableRule};
-
 return [
+
+    // ?filters=whereIn:id=1,2,3|whereIsTrue:boolean|whereNotNull:updated_at|whereGreaterThan:number=5
 
     /*
     |--------------------------------------------------------------------------
-    | Filter Query Value Separator
+    | Enable debug mode
     |--------------------------------------------------------------------------
     |
-    | Separator for multiple values, for example: "1,2,3".
+    | Enable debug mode with logging.
     |
     */
-    'rules' => [
-        ArrayableRule::class,
-        NullableRule::class,
-        StringableRule::class,
-        CustomableRule::class,
-    ],
+    'debug' => true,
 
     /*
     |--------------------------------------------------------------------------

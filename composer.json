@@ -12,5 +12,12 @@
             "email": "ivan.uskov.letter@gmail.com"
         }
     ],
-    "require": {}
+    "require": {},
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Ivus\\Filter\\FilterServiceProvider"
+            ]
+        }
+    }
 }

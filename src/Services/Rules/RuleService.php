@@ -2,22 +2,27 @@
 
 namespace Ivus\Filter\Services\Rules;
 
-use Ivus\Filter\Enums\Rules\{ArrayableRule, CustomableRule, NullableRule, StringableRule};
+use Illuminate\Support\Facades\File;
+use Ivus\Filter\Interfaces\Enums\RuleInterface;
+use Ivus\Filter\Interfaces\Services\RuleServiceInterface;
 
-class RuleService
+class RuleService implements RuleServiceInterface
 {
+    const RULES_NAMESPACE = 'Ivus\\Filter\\Enums\\Rules';
+
     /**
      * Get resolved rule by string
      *
      * @param string $value
-     * @return ArrayableRule|CustomableRule|NullableRule|StringableRule|null
+     * @return RuleInterface|null
      */
-    public static function getResolvedRule(string $value): ArrayableRule | CustomableRule | NullableRule | StringableRule | null
+    public static function getResolvedRule(string $value): ?RuleInterface
     {
-        foreach (config('filters.rules', []) as $rule) {
-            $enumable = $rule::tryFrom($value);
-            $isResolved = $enumable instanceof $rule;
-            if ($isResolved) return $enumable;
+        foreach (File::files(__DIR__ . '/../../Enums/Rules/') as $rule) {
+            $rule = static::RULES_NAMESPACE . '\\' . str_replace('.php', '', $rule->getFilename());
+            $enumable =$rule::tryFrom($value);
+            if ($enumable instanceof $rule)
+                return $enumable;
         }
 
         return null;

@@ -2,7 +2,9 @@
 
 namespace Ivus\Filter\Enums\Rules;
 
-enum CustomableRule: string
+use Ivus\Filter\Interfaces\Enums\{RuleInterface, ImaginableBuilderRuleInterface};
+
+enum CustomableRule: string implements RuleInterface, ImaginableBuilderRuleInterface
 {
-    case CUSTOM = 'custom';
+    case WHERE_METHOD = 'whereMethod';
 }
