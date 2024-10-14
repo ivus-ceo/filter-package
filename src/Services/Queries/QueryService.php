@@ -7,10 +7,7 @@ use Illuminate\Support\Facades\Log;
 use Ivus\Filter\DTOs\Queries\QueryDTO;
 use Ivus\Filter\Enums\Rules\{ArrayableRule, CustomableRule, NullableRule, StringableRule};
 use Ivus\Filter\Exceptions\FilterQueryException;
-use Ivus\Filter\Interfaces\Enums\ImaginableBuilderRuleInterface;
-use Ivus\Filter\Interfaces\Enums\RuleInterface;
 use Ivus\Filter\Interfaces\Services\QueryServiceInterface;
-use Ivus\Filter\Services\Builders\BuilderService;
 use Ivus\Filter\Services\Filters\FilterService;
 use Ivus\Filter\Services\Rules\RuleService;
 

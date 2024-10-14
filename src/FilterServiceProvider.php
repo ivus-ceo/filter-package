@@ -2,10 +2,7 @@
 
 namespace Ivus\Filter;
 
-use Illuminate\Foundation\Application;
 use Illuminate\Support\ServiceProvider;
-use Ivus\Filter\Interfaces\Services\{QueryServiceInterface, RuleServiceInterface, FilterServiceInterface};
-use Ivus\Filter\Services\Queries\QueryService;
 
 class FilterServiceProvider extends ServiceProvider
 {

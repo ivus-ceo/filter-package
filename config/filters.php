@@ -2,8 +2,6 @@
 
 return [
 
-    // ?filters=whereIn:id=1,2,3|whereIsTrue:boolean|whereNotNull:updated_at|whereGreaterThan:number=5
-
     /*
     |--------------------------------------------------------------------------
     | Enable debug mode
