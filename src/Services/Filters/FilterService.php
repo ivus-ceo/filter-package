@@ -2,6 +2,7 @@
 
 namespace Ivus\Filter\Services\Filters;
 
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -12,8 +13,10 @@ use Ivus\Filter\Enums\Operators\Operator;
 use Ivus\Filter\Enums\Rules\ArrayableRule;
 use Ivus\Filter\Enums\Rules\BooleanRule;
 use Ivus\Filter\Enums\Rules\CustomableRule;
+use Ivus\Filter\Enums\Rules\DateableRule;
 use Ivus\Filter\Enums\Rules\NumericRule;
 use Ivus\Filter\Enums\Rules\RelationableRule;
+use Ivus\Filter\Enums\Rules\SearchableRule;
 use Ivus\Filter\Enums\Rules\StringableRule;
 use Ivus\Filter\Interfaces\Enums\ExistingBuilderRuleInterface;
 use Ivus\Filter\Interfaces\Enums\RuleInterface;
@@ -81,11 +84,16 @@ abstract class FilterService implements FilterServiceInterface
      * Get method by rule
      *
      * @param RuleInterface $rule
+     * @param string $customMethod
      * @return string
      */
-    public static function getMethodByRule(RuleInterface $rule): string
+    public static function getMethodByRule(RuleInterface $rule, string $customMethod = 'where'): string
     {
-        return ($rule instanceof ExistingBuilderRuleInterface) ? $rule->value : 'where';
+        return match (true) {
+            $rule instanceof CustomableRule => $customMethod,
+            $rule instanceof ExistingBuilderRuleInterface => $rule->value,
+            default => 'where',
+        };
     }
 
     /**
@@ -99,17 +107,67 @@ abstract class FilterService implements FilterServiceInterface
         if ($rule instanceof ExistingBuilderRuleInterface)
             return null;
 
-        return match ($rule) {
-            BooleanRule::WHERE_TRUE, BooleanRule::OR_WHERE_TRUE,
-            BooleanRule::WHERE_FALSE, BooleanRule::OR_WHERE_FALSE => Operator::EQUALS,
-            BooleanRule::WHERE_NOT_TRUE, BooleanRule::OR_WHERE_NOT_TRUE,
-            BooleanRule::WHERE_NOT_FALSE, BooleanRule::OR_WHERE_NOT_FALSE => Operator::NOT_EQUALS,
-            NumericRule::WHERE_EQUAL, NumericRule::OR_WHERE_EQUAL => Operator::EQUALS,
-            NumericRule::WHERE_NOT_EQUAL, NumericRule::OR_WHERE_NOT_EQUAL => Operator::NOT_EQUALS,
-            NumericRule::WHERE_GREATER_THAN, NumericRule::OR_WHERE_GREATER_THAN => Operator::GREATER_THAN,
-            NumericRule::WHERE_LESS_THAN, NumericRule::OR_WHERE_LESS_THAN => Operator::LESS_THAN,
-            NumericRule::WHERE_GREATER_THAN_OR_EQUAL, NumericRule::OR_WHERE_GREATER_THAN_OR_EQUAL => Operator::GREATER_THAN_OR_EQUALS,
-            NumericRule::WHERE_LESS_THAN_OR_EQUAL, NumericRule::OR_WHERE_LESS_THAN_OR_EQUAL => Operator::LESS_THAN_OR_EQUALS,
+        return match (true) {
+            in_array($rule, [
+                BooleanRule::WHERE_TRUE, BooleanRule::OR_WHERE_TRUE,
+                BooleanRule::WHERE_FALSE, BooleanRule::OR_WHERE_FALSE,
+
+                NumericRule::WHERE_EQUAL, NumericRule::OR_WHERE_EQUAL,
+
+                DateableRule::WHERE_DATE_EQUAL, DateableRule::OR_WHERE_DATE_EQUAL,
+                DateableRule::WHERE_DAY_EQUAL, DateableRule::OR_WHERE_DAY_EQUAL,
+                DateableRule::WHERE_MONTH_EQUAL, DateableRule::OR_WHERE_MONTH_EQUAL,
+                DateableRule::WHERE_YEAR_EQUAL, DateableRule::OR_WHERE_YEAR_EQUAL,
+                DateableRule::WHERE_TIME_EQUAL, DateableRule::OR_WHERE_TIME_EQUAL,
+            ]) => Operator::EQUAL,
+            in_array($rule, [
+                BooleanRule::WHERE_NOT_TRUE, BooleanRule::OR_WHERE_NOT_TRUE,
+                BooleanRule::WHERE_NOT_FALSE, BooleanRule::OR_WHERE_NOT_FALSE,
+
+                NumericRule::WHERE_NOT_EQUAL, NumericRule::OR_WHERE_NOT_EQUAL,
+
+                DateableRule::WHERE_DATE_NOT_EQUAL, DateableRule::OR_WHERE_DATE_NOT_EQUAL,
+                DateableRule::WHERE_DAY_NOT_EQUAL, DateableRule::OR_WHERE_DAY_NOT_EQUAL,
+                DateableRule::WHERE_MONTH_NOT_EQUAL, DateableRule::OR_WHERE_MONTH_NOT_EQUAL,
+                DateableRule::WHERE_YEAR_NOT_EQUAL, DateableRule::OR_WHERE_YEAR_NOT_EQUAL,
+                DateableRule::WHERE_TIME_NOT_EQUAL, DateableRule::OR_WHERE_TIME_NOT_EQUAL,
+            ]) => Operator::NOT_EQUAL,
+            in_array($rule, [
+                NumericRule::WHERE_GREATER_THAN, NumericRule::OR_WHERE_GREATER_THAN,
+
+                DateableRule::WHERE_DATE_GREATER_THAN, DateableRule::OR_WHERE_DATE_GREATER_THAN,
+                DateableRule::WHERE_DAY_GREATER_THAN, DateableRule::OR_WHERE_DAY_GREATER_THAN,
+                DateableRule::WHERE_MONTH_GREATER_THAN, DateableRule::OR_WHERE_MONTH_GREATER_THAN,
+                DateableRule::WHERE_YEAR_GREATER_THAN, DateableRule::OR_WHERE_YEAR_GREATER_THAN,
+                DateableRule::WHERE_TIME_GREATER_THAN, DateableRule::OR_WHERE_TIME_GREATER_THAN,
+            ]) => Operator::GREATER_THAN,
+            in_array($rule, [
+                NumericRule::WHERE_LESS_THAN, NumericRule::OR_WHERE_LESS_THAN,
+
+                DateableRule::WHERE_DATE_LESS_THAN, DateableRule::OR_WHERE_DATE_LESS_THAN,
+                DateableRule::WHERE_DAY_LESS_THAN, DateableRule::OR_WHERE_DAY_LESS_THAN,
+                DateableRule::WHERE_MONTH_LESS_THAN, DateableRule::OR_WHERE_MONTH_LESS_THAN,
+                DateableRule::WHERE_YEAR_LESS_THAN, DateableRule::OR_WHERE_YEAR_LESS_THAN,
+                DateableRule::WHERE_TIME_LESS_THAN, DateableRule::OR_WHERE_TIME_LESS_THAN,
+            ]) => Operator::LESS_THAN,
+            in_array($rule, [
+                NumericRule::WHERE_GREATER_THAN_OR_EQUAL, NumericRule::OR_WHERE_GREATER_THAN_OR_EQUAL,
+
+                DateableRule::WHERE_DATE_GREATER_THAN_OR_EQUAL, DateableRule::OR_WHERE_DATE_GREATER_THAN_OR_EQUAL,
+                DateableRule::WHERE_DAY_GREATER_THAN_OR_EQUAL, DateableRule::OR_WHERE_DAY_GREATER_THAN_OR_EQUAL,
+                DateableRule::WHERE_MONTH_GREATER_THAN_OR_EQUAL, DateableRule::OR_WHERE_MONTH_GREATER_THAN_OR_EQUAL,
+                DateableRule::WHERE_YEAR_GREATER_THAN_OR_EQUAL, DateableRule::OR_WHERE_YEAR_GREATER_THAN_OR_EQUAL,
+                DateableRule::WHERE_TIME_GREATER_THAN_OR_EQUAL, DateableRule::OR_WHERE_TIME_GREATER_THAN_OR_EQUAL,
+            ]) => Operator::GREATER_THAN_OR_EQUAL,
+            in_array($rule, [
+                NumericRule::WHERE_LESS_THAN_OR_EQUAL, NumericRule::OR_WHERE_LESS_THAN_OR_EQUAL,
+
+                DateableRule::WHERE_DATE_LESS_THAN_OR_EQUAL, DateableRule::OR_WHERE_DATE_LESS_THAN_OR_EQUAL,
+                DateableRule::WHERE_DAY_LESS_THAN_OR_EQUAL, DateableRule::OR_WHERE_DAY_LESS_THAN_OR_EQUAL,
+                DateableRule::WHERE_MONTH_LESS_THAN_OR_EQUAL, DateableRule::OR_WHERE_MONTH_LESS_THAN_OR_EQUAL,
+                DateableRule::WHERE_YEAR_LESS_THAN_OR_EQUAL, DateableRule::OR_WHERE_YEAR_LESS_THAN_OR_EQUAL,
+                DateableRule::WHERE_TIME_LESS_THAN_OR_EQUAL, DateableRule::OR_WHERE_TIME_LESS_THAN_OR_EQUAL,
+            ]) => Operator::LESS_THAN_OR_EQUAL,
             default => null,
         };
     }
@@ -128,11 +186,9 @@ abstract class FilterService implements FilterServiceInterface
         return match (true) {
             $rule instanceof ArrayableRule => explode($separators['value'], $value),
             $rule instanceof BooleanRule => Str::contains($rule->name, 'TRUE'),
+            $rule instanceof DateableRule => Carbon::parse($value),
             $rule instanceof NumericRule => (int) $value,
-            $rule instanceof StringableRule && in_array($rule, [
-                StringableRule::WHERE_LIKE, StringableRule::OR_WHERE_LIKE,
-                StringableRule::WHERE_NOT_LIKE, StringableRule::OR_WHERE_NOT_LIKE,
-            ]) => "%$value%",
+            $rule instanceof SearchableRule => "%$value%",
             $rule instanceof StringableRule, $rule instanceof RelationableRule, $rule instanceof CustomableRule => $value,
             default => null,
         };

@@ -82,11 +82,9 @@ class QueryService implements QueryServiceInterface
                 if (empty($rule))
                     throw new FilterQueryException(trans('filters::errors.queries.E2', ['rule' => $ruleName]));
 
-                $method = ($rule instanceof CustomableRule) ? $columnName : FilterService::getMethodByRule($rule);
-
                 $queryDTOs[] = new QueryDTO(
                     rule: $rule,
-                    method: $method,
+                    method: FilterService::getMethodByRule($rule, $columnName),
                     columnName: $columnName,
                     columnOperator: FilterService::getOperatorByRule($rule),
                     columnValue: FilterService::getValueByRule($rule, $columnValue),
