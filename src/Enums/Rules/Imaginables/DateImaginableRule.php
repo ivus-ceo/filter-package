@@ -1,10 +1,10 @@
 <?php
 
-namespace Ivus\Filter\Enums\Rules;
+namespace Ivus\Filter\Enums\Rules\Imaginables;
 
-use Ivus\Filter\Interfaces\Enums\{RuleInterface, ImaginableBuilderRuleInterface};
+use Ivus\Filter\Interfaces\Enums\Rules\{RuleInterface, Imaginables\ImaginableRuleInterface};
 
-enum DateableRule: string implements RuleInterface, ImaginableBuilderRuleInterface
+enum DateImaginableRule: string implements RuleInterface, ImaginableRuleInterface
 {
     case WHERE_DATE_EQUAL = 'whereDateEqual';
     case OR_WHERE_DATE_EQUAL = 'orWhereDateEqual';

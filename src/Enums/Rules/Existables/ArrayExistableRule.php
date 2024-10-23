@@ -1,10 +1,10 @@
 <?php
 
-namespace Ivus\Filter\Enums\Rules;
+namespace Ivus\Filter\Enums\Rules\Existables;
 
-use Ivus\Filter\Interfaces\Enums\{RuleInterface, ExistingBuilderRuleInterface};
+use Ivus\Filter\Interfaces\Enums\Rules\{RuleInterface, Existables\ExistableRuleInterface};
 
-enum ArrayableRule: string implements RuleInterface, ExistingBuilderRuleInterface
+enum ArrayExistableRule: string implements RuleInterface, ExistableRuleInterface
 {
     case WHERE_IN = 'whereIn';
     case OR_WHERE_IN = 'orWhereIn';

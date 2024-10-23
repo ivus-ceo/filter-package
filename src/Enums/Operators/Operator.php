@@ -2,7 +2,7 @@
 
 namespace Ivus\Filter\Enums\Operators;
 
-use Ivus\Filter\Interfaces\Enums\OperatorInterface;
+use Ivus\Filter\Interfaces\Enums\Operators\OperatorInterface;
 
 enum Operator: string implements OperatorInterface
 {

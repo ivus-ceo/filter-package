@@ -2,7 +2,7 @@
 
 namespace Ivus\Filter\Interfaces\DTOs;
 
-use Ivus\Filter\Interfaces\Enums\{OperatorInterface, RuleInterface};
+use Ivus\Filter\Interfaces\Enums\{Operators\OperatorInterface, Rules\RuleInterface};
 
 interface QueryDTOInterface
 {

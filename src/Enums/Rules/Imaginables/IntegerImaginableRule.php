@@ -1,10 +1,10 @@
 <?php
 
-namespace Ivus\Filter\Enums\Rules;
+namespace Ivus\Filter\Enums\Rules\Imaginables;
 
-use Ivus\Filter\Interfaces\Enums\{RuleInterface, ImaginableBuilderRuleInterface};
+use Ivus\Filter\Interfaces\Enums\Rules\{RuleInterface, Imaginables\ImaginableRuleInterface};
 
-enum NumericRule: string implements RuleInterface, ImaginableBuilderRuleInterface
+enum IntegerImaginableRule: string implements RuleInterface, ImaginableRuleInterface
 {
     case WHERE_EQUAL = 'whereEqual';
     case OR_WHERE_EQUAL = 'orWhereEqual';

@@ -4,7 +4,10 @@
     "autoload": {
         "psr-4": {
             "Ivus\\Filter\\": "src/"
-        }
+        },
+        "files": [
+            "src/Helpers/autoload.php"
+        ]
     },
     "authors": [
         {

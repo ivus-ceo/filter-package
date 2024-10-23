@@ -5,49 +5,42 @@ namespace Ivus\Filter\Tests\Unit\Services\Queries;
 use Illuminate\Foundation\Testing\TestCase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
+use Ivus\Filter\DTOs\Queries\Defaults\DefaultQueryDTO;
 use Ivus\Filter\DTOs\Queries\QueryDTO;
+use Ivus\Filter\DTOs\Queries\Relations\RelationQueryDTO;
+use Ivus\Filter\Enums\Operators\Operator;
+use Ivus\Filter\Enums\Rules\Existables\ArrayExistableRule;
+use Ivus\Filter\Enums\Rules\Existables\BooleanExistableRule;
+use Ivus\Filter\Enums\Rules\Existables\CustomExistableRule;
+use Ivus\Filter\Enums\Rules\Existables\DateExistableRule;
+use Ivus\Filter\Enums\Rules\Imaginables\ArrayImaginableRule;
+use Ivus\Filter\Enums\Rules\Imaginables\BooleanImaginableRule;
+use Ivus\Filter\Enums\Rules\Imaginables\CustomImaginableRule;
+use Ivus\Filter\Enums\Rules\Imaginables\DateImaginableRule;
+use Ivus\Filter\Interfaces\Services\FilterServiceInterface;
+use Ivus\Filter\Services\Filters\FilterService;
 use Ivus\Filter\Services\Queries\QueryService;
+use Ivus\Filter\Services\Rules\RuleService;
+use Mockery;
 
 class QueryServiceTest extends TestCase
 {
-    public function setUp(): void
-    {
-        parent::setUp();
-        // Mocking necessary services or configs
-        config(['filters.query_name' => 'filters']);
-        config(['filters.union_separator' => '|']);
-        config(['filters.rule_separator' => ':']);
-        config(['filters.column_separator' => '=']);
-    }
-
     public function test_get_separators_returns_array(): void
     {
-        // Call the getSeparators method
-        $result = QueryService::getSeparators();
+        // Call the getQuerySeparators method
+        $result = QueryService::getQuerySeparators();
 
-        // Check that the result is an array
+        // Check that the result is an array with 5 elements
         $this->assertIsArray($result);
+        $this->assertCount(5, $result);
 
-        // Check that the array has 4 elements
-        $this->assertCount(4, $result);
-
-        // Array keys should exist
-        $this->assertArrayHasKey('union', $result);
-        $this->assertArrayHasKey('rule', $result);
-        $this->assertArrayHasKey('column', $result);
-        $this->assertArrayHasKey('value', $result);
-
-        // Expect that the values are strings
-        $this->assertIsString($result['union']);
-        $this->assertIsString($result['rule']);
-        $this->assertIsString($result['column']);
-        $this->assertIsString($result['value']);
-
-        // Expect that the values are not empty
-        $this->assertEquals(config('filters.union_separator', QueryService::DEFAULT_UNION_SEPARATOR), $result['union']);
-        $this->assertEquals(config('filters.rule_separator', QueryService::DEFAULT_RULE_SEPARATOR), $result['rule']);
-        $this->assertEquals(config('filters.column_separator', QueryService::DEFAULT_COLUMN_SEPARATOR), $result['column']);
-        $this->assertEquals(config('filters.value_separator', QueryService::DEFAULT_VALUE_SEPARATOR), $result['value']);
+        $expectedKeys = ['union', 'rule', 'column', 'value', 'relation'];
+        foreach ($expectedKeys as $key) {
+            // Check the array contains correct keys
+            $this->assertArrayHasKey($key, $result);
+            // Check values from config or defaults
+            $this->assertEquals(config("filters.{$key}_separator", QueryService::{'DEFAULT_' . strtoupper($key) . '_SEPARATOR'}), $result[$key]);
+        }
     }
 
     public function test_get_sanitized_string_removes_html_tags(): void
@@ -56,10 +49,19 @@ class QueryServiceTest extends TestCase
         $input = '<p>This is a <strong>test</strong> string</p>';
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expect HTML tags to be removed
-        $expected = 'This is a test string';
+        $expected = 'Thisisateststring';
+        $this->assertEquals($expected, $result);
+
+        $query = '<b>bold</b><script>alert("test")</script>';
+
+        // Call the method
+        $result = QueryService::getSanitizedQuery($query);
+
+        // Expect HTML tags to be removed
+        $expected = 'boldalert(&quot;test&quot;)';
         $this->assertEquals($expected, $result);
     }
 
@@ -69,20 +71,29 @@ class QueryServiceTest extends TestCase
         $input = '"This is a \'test\' & string"';
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expected output where quotes and ampersand are encoded
-        $expected = '&quot;This is a &#039;test&#039; &amp; string&quot;';
+        $expected = '&quot;Thisisa&#039;test&#039;&amp;string&quot;';
         $this->assertEquals($expected, $result);
     }
 
     public function test_get_sanitized_string_safe_input_remains_unchanged(): void
     {
         // Safe string without HTML or special characters
-        $input = 'This is a safe string';
+        $input = 'ThisIsASafeString';
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
+
+        // Expect the string to remain unchanged
+        $this->assertEquals($input, $result);
+
+        // Safe string without HTML or special characters
+        $input = 'whereHas:rooms=5~where:roominess=1~whereNotNull:published_at|whereEqualTrue:is_built|whereBetween:developer_id=1,10';
+
+        // Call the method
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expect the string to remain unchanged
         $this->assertEquals($input, $result);
@@ -94,7 +105,7 @@ class QueryServiceTest extends TestCase
         $input = '<script>alert("XSS")</script>';
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expect script tags to be removed
         $expected = 'alert(&quot;XSS&quot;)';  // The script tag is removed, but content is encoded
@@ -103,7 +114,7 @@ class QueryServiceTest extends TestCase
         $input = "<script>alert('XSS')</script>";
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expect script tags to be removed
         $expected = 'alert(&#039;XSS&#039;)';  // The script tag is removed, but content is encoded
@@ -116,11 +127,123 @@ class QueryServiceTest extends TestCase
         $input = '';
 
         // Call the method
-        $result = QueryService::getSanitizedString($input);
+        $result = QueryService::getSanitizedQuery($input);
 
         // Expect an empty result
         $this->assertEquals('', $result);
     }
+
+    public function test_get_sanitized_string_filters_valid_input(): void
+    {
+        $input = 'whereIn:id=1,2,3|whereIsTrue:boolean|whereNotNull:updated_at|whereGreaterThan:number=5';
+        $expected = 'whereIn:id=1,2,3|whereIsTrue:boolean|whereNotNull:updated_at|whereGreaterThan:number=5';
+        $result = QueryService::getSanitizedQuery($input);
+
+        $this->assertEquals($expected, $result);
+    }
+
+    public function test_get_query_dtos_with_array_rules(): void
+    {
+        $this->assertRules([ArrayExistableRule::class, ArrayImaginableRule::class], function ($case) {
+            $expectedRule = $case->value;
+            $expectedColumn = fake()->word();
+            $expectedOperator = null;
+            $expectedValue = [];
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}");
+            $this->assertCount(1, $result);
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+
+            // Now parsing with actual values
+            for ($index = 0; $index < fake()->numberBetween(1, 10); $index++)
+                $expectedValue[] = (fake()->boolean()) ? fake()->word() : fake()->randomDigit();
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}=" . implode(',', $expectedValue));
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+        });
+    }
+
+    public function test_get_query_dtos_with_boolean_rules(): void
+    {
+        $this->assertRules([BooleanExistableRule::class, BooleanImaginableRule::class], function ($case) {
+            $expectedRule = $case->value;
+            $expectedColumn = fake()->word();
+            $expectedOperator = FilterService::getOperatorByRule($case);
+            $expectedValue = FilterService::getValueByRule($case, null);
+
+            $this->assertInstanceOf(Operator::class, $expectedOperator);
+            $expectedOperator = $expectedOperator->value;
+            $this->assertIsString($expectedOperator);
+            $this->assertIsBool($expectedValue);
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}");
+            $this->assertCount(1, $result);
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+
+            // Fake data that should not be used
+            $fakeValues = [];
+            for ($index = 0; $index < fake()->numberBetween(1, 10); $index++)
+                $fakeValues[] = (fake()->boolean()) ? fake()->word() : fake()->randomDigit();
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}=" . implode(',', $fakeValues));
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+        });
+    }
+
+    public function test_get_query_dtos_with_custom_rules(): void
+    {
+        $this->assertRules([CustomExistableRule::class, CustomImaginableRule::class], function ($case) {
+            $expectedRule = $case->value;
+            $expectedMethod = fake()->word();
+            $expectedOperator = null;
+            $expectedParam = null;
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedMethod}");
+            $this->assertCount(1, $result);
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedMethod, $expectedOperator, $expectedParam);
+
+            // Now parsing with actual values
+            for ($index = 0; $index < fake()->numberBetween(1, 10); $index++)
+                $expectedParam[] = (fake()->boolean()) ? fake()->word() : fake()->randomDigit();
+            $expectedParam = implode(',', $expectedParam);
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedMethod}={$expectedParam}");
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedMethod, $expectedOperator, $expectedParam);
+        });
+    }
+
+    public function test_get_query_dtos_with_date_rules(): void
+    {
+        $this->assertRules([DateExistableRule::class, DateImaginableRule::class], function ($case) {
+            $expectedRule = $case->value;
+            $expectedColumn = fake()->word();
+            $expectedOperator = null;
+            $expectedValue = null;
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}");
+            $this->assertCount(1, $result);
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+
+            // Now parsing with actual values
+            for ($index = 0; $index < fake()->numberBetween(1, 10); $index++)
+                $expectedValue[] = (fake()->boolean()) ? fake()->word() : fake()->randomDigit();
+
+            // Parsing the filter string
+            $result = QueryService::getQueryDTOs("{$expectedRule}:{$expectedColumn}=" . implode(',', $expectedValue));
+            $this->assertDefaultQueryDTO($result[0], $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+        });
+    }
+
+
+
+
 
     public function test_get_query_dtos_returns_correct_dtos(): void
     {
@@ -174,12 +297,50 @@ class QueryServiceTest extends TestCase
         $this->app->instance('request', Request::create('http://example.com' . $queryString, 'GET'));
     }
 
-    private function assertQueryDTO($queryDTO, string $expectedColumn, string $expectedRule, ?string $expectedOperator, $expectedValue): void
+    private function assertQueryDTO(
+        $queryDTO,
+        string $expectedRule,
+        string $expectedColumn,
+        string $expectedOperator = null,
+        $expectedValue = null
+    ): void
     {
-        $this->assertInstanceOf(QueryDTO::class, $queryDTO);
         $this->assertEquals($expectedColumn, $queryDTO->columnName);
         $this->assertEquals($expectedRule, $queryDTO->rule->value);
         $this->assertEquals($expectedOperator, $queryDTO->columnOperator->value ?? null);
-        $this->assertEquals($expectedValue, $queryDTO->columnValue);
+        $this->assertEquals($expectedValue, $queryDTO->columnValue ?? null);
+    }
+
+    private function assertDefaultQueryDTO(
+        $defaultQueryDTO,
+        string $expectedRule,
+        string $expectedColumn,
+        string $expectedOperator = null,
+        $expectedValue = null
+    ): void
+    {
+        $this->assertInstanceOf(DefaultQueryDTO::class, $defaultQueryDTO);
+        $this->assertQueryDTO($defaultQueryDTO, $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+    }
+
+    private function assertRelationQueryDTO(
+        $relationQueryDTO,
+        string $expectedRule,
+        string $expectedColumn,
+        string $expectedOperator = null,
+        $expectedValue = null
+    ): void
+    {
+        $this->assertInstanceOf(RelationQueryDTO::class, $relationQueryDTO);
+        $this->assertQueryDTO($relationQueryDTO, $expectedRule, $expectedColumn, $expectedOperator, $expectedValue);
+    }
+
+    private function assertRules(array $rules, \Closure $closure): void
+    {
+        foreach ($rules as $rule) {
+            foreach ($rule::cases() as $case) {
+                $closure($case);
+            }
+        }
     }
 }
